@@ -12,14 +12,20 @@ import (
 	"strings"
 )
 
-func findBeer(node *html.Node, beers *[]string) {
-	for _, attr := range node.Attr {
-		if attr.Key == "id" && strings.HasPrefix(attr.Val, "beer-") {
-			brewery, brew := "", ""
-			findBrewery(node, &brewery)
-			findBrew(node, &brew)
-			beer := fmt.Sprintf("%-38.38s  %s", brewery, brew)
-			*beers = append(*beers, beer)
+type beerInfo struct {
+	brewery string
+	brew    string
+}
+
+func findBeer(node *html.Node, beers *[]beerInfo) {
+	if node.DataAtom == atom.Div {
+		for _, attr := range node.Attr {
+			if attr.Key == "id" && strings.HasPrefix(attr.Val, "beer-") {
+				brewery, brew := "", ""
+				findBrewery(node, &brewery)
+				findBrew(node, &brew)
+				*beers = append(*beers, beerInfo{brewery, brew})
+			}
 		}
 	}
 	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
@@ -87,9 +93,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	beers := []string{}
+	beers := []beerInfo{}
 	findBeer(doc, &beers)
 	for _, beer := range beers {
-		fmt.Println(beer)
+		fmt.Printf("%-38.38s  %s\n", beer.brewery, beer.brew)
 	}
 }
