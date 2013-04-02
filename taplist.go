@@ -2,6 +2,7 @@ package main
 
 import (
 	"code.google.com/p/go.net/html"
+	"code.google.com/p/go.net/html/atom"
 
 	"fmt"
 	"log"
@@ -13,16 +14,49 @@ import (
 
 func findBeer(node *html.Node, beers *[]string) {
 	for _, attr := range node.Attr {
-		if attr.Key == "class" && attr.Val == "beer-name" {
-			if content := node.FirstChild; content != nil {
-				*beers = append(*beers, content.Data)
-				return
-			}
+		if attr.Key == "id" && strings.HasPrefix(attr.Val, "beer-") {
+			brewery, brew := "", ""
+			findBrewery(node, &brewery)
+			findBrew(node, &brew)
+			beer := fmt.Sprintf("%-38.38s  %s", brewery, brew)
+			*beers = append(*beers, beer)
 		}
 	}
 	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
 		findBeer(kid, beers)
 	}
+}
+
+func findBrewery(node *html.Node, brewery *string) bool {
+	if node.DataAtom == atom.H4 {
+		if content := node.FirstChild; content != nil {
+			*brewery = content.Data
+			return true
+		}
+	}
+	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
+		if findBrewery(kid, brewery) {
+			return true
+		}
+	}
+	return false
+}
+
+func findBrew(node *html.Node, brew *string) bool {
+	for _, attr := range node.Attr {
+		if attr.Key == "class" && attr.Val == "beer-name" {
+			if content := node.FirstChild; content != nil {
+				*brew = content.Data
+				return true
+			}
+		}
+	}
+	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
+		if findBrew(kid, brew) {
+			return true
+		}
+	}
+	return false
 }
 
 func checkId(id string) bool {
