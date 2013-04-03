@@ -90,7 +90,7 @@ func readRc() {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		idx := strings.IndexAny(line, " \t")
-		if idx < len(line) - 1 {
+		if idx < len(line)-1 {
 			id, name := line[:idx], strings.TrimSpace(line[idx:])
 			barMap[id] = name
 		}
