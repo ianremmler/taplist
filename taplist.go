@@ -5,12 +5,16 @@ import (
 	"code.google.com/p/go.net/html/atom"
 
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/user"
 	"regexp"
 	"strings"
 )
+
+var barMap = map[string]string{}
 
 type beerInfo struct {
 	brewery string
@@ -73,6 +77,35 @@ func checkId(id string) bool {
 	return ok
 }
 
+func readRc() {
+	usr, err := user.Current()
+	if err != nil {
+		return
+	}
+	data, err := ioutil.ReadFile(usr.HomeDir + "/.taplistrc")
+	if err != nil {
+		return
+	}
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		idx := strings.IndexAny(line, " \t")
+		if idx < len(line) - 1 {
+			id, name := line[:idx], strings.TrimSpace(line[idx:])
+			barMap[id] = name
+		}
+	}
+}
+
+func findBar(arg string) (string, string) {
+	for id, name := range barMap {
+		if strings.Contains(strings.ToLower(name), strings.ToLower(arg)) {
+			return id, name
+		}
+	}
+	return "", ""
+}
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("taplist: ")
@@ -80,21 +113,30 @@ func main() {
 	if len(os.Args) != 2 {
 		log.Fatalln("usage: taplist <id>")
 	}
-	id := strings.ToLower(os.Args[1])
-	if !checkId(id) {
-		log.Fatalln(id + " doesn't look like a valid taplister bar id")
+	readRc()
+	arg := strings.ToLower(os.Args[1])
+	id, name := "", ""
+	if checkId(arg) {
+		id, name = arg, arg
+	} else {
+		id, name = findBar(arg)
 	}
+	if id == "" {
+		log.Fatalln(arg + " doesn't look like a valid name or taplister bar id")
+	}
+
 	resp, err := http.Get("http://www.taplister.com/bars/" + id)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 	defer resp.Body.Close()
 	doc, err := html.Parse(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 	beers := []beerInfo{}
 	findBeer(doc, &beers)
+	fmt.Println("On tap at " + name + ":\n")
 	for _, beer := range beers {
 		fmt.Printf("%-38.38s  %s\n", beer.brewery, beer.brew)
 	}
