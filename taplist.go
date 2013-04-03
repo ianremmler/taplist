@@ -69,6 +69,32 @@ func findBrew(node *html.Node, brew *string) bool {
 	return false
 }
 
+func findBarDesc(node *html.Node, desc *string) bool {
+	if node.DataAtom == atom.Meta {
+		isDesc := false
+		for _, attr := range node.Attr {
+			if attr.Key == "name" && attr.Val == "description" {
+				isDesc = true
+				break
+			}
+		}
+		if isDesc {
+			for _, attr := range node.Attr {
+				if attr.Key == "content" {
+					*desc = attr.Val
+					break
+				}
+			}
+		}
+	}
+	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
+		if findBarDesc(kid, desc) {
+			return true
+		}
+	}
+	return false
+}
+
 func checkId(id string) bool {
 	ok, err := regexp.MatchString("^[[:xdigit:]]{24}$", id)
 	if err != nil {
@@ -97,7 +123,7 @@ func readRc() {
 	}
 }
 
-func findBar(arg string) (string, string) {
+func lookupBar(arg string) (string, string) {
 	for id, name := range barMap {
 		if strings.Contains(strings.ToLower(name), strings.ToLower(arg)) {
 			return id, name
@@ -119,7 +145,7 @@ func main() {
 	if checkId(arg) {
 		id, name = arg, arg
 	} else {
-		id, name = findBar(arg)
+		id, name = lookupBar(arg)
 	}
 	if id == "" {
 		log.Fatalln(arg + " doesn't look like a valid name or taplister bar id")
@@ -134,9 +160,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	beers := []beerInfo{}
+	desc, beers := "", []beerInfo{}
+	findBarDesc(doc, &desc)
 	findBeer(doc, &beers)
-	fmt.Println("On tap at " + name + ":\n")
+	if desc != "" {
+		fmt.Println(desc + "\n")
+	} else {
+		fmt.Printf("%d beers on tap at "+name+"\n\n", len(beers))
+	}
 	for _, beer := range beers {
 		fmt.Printf("%-38.38s  %s\n", beer.brewery, beer.brew)
 	}
