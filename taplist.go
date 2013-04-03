@@ -111,7 +111,7 @@ func main() {
 	log.SetPrefix("taplist: ")
 
 	if len(os.Args) != 2 {
-		log.Fatalln("usage: taplist <id>")
+		log.Fatalln("usage: taplist <id> | <name>")
 	}
 	readRc()
 	arg := strings.ToLower(os.Args[1])
