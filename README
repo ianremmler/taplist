@@ -1,2 +1,24 @@
 Taplist gets the list of beers on tap at a bar from taplister and prints them
-to your terminal.
+to your terminal.  Find your bar on taplister.com, and grab the id from the end
+of the url.  For example, the URL for Black Star Co-op in Austin, TX is:
+
+  http://www.taplister.com/bars/4b888dbbf964a520480032e3
+
+To find out what's on tap:
+
+  > taplist 4b888dbbf964a520480032e3
+
+You can also create a file called .taplistrc in your home directory that
+contains bar ids followed by a name (or initials, or nickname, or whatever).
+An entry for the above example:
+
+  4b888dbbf964a520480032e3 Black Star Co-op
+
+Then you can find out what's on tap by giving part or all of the bar name:
+
+  > taplist black
+
+Disclaimer: I have no clue if or when taplister will change the id format or
+HTML and completely break the thing.
+
+Have an appropriate amount of fun!
