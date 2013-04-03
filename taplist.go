@@ -30,17 +30,26 @@ func recFind(node *html.Node, result *string, fn func(*html.Node, *string) bool)
 	return false
 }
 
-func findBeer(node *html.Node, beers *[]beerInfo) {
-	if node.DataAtom == atom.Div {
-		for _, attr := range node.Attr {
-			if attr.Key == "id" && strings.HasPrefix(attr.Val, "beer-") {
-				brewery, brew := "", ""
-				findBrewery(node, &brewery)
-				findBrew(node, &brew)
-				*beers = append(*beers, beerInfo{brewery, brew})
-				return
+func findAttr(node *html.Node, keyRx, valRx string) *html.Attribute {
+	for _, attr := range node.Attr {
+		ok, err := regexp.MatchString(keyRx, attr.Key)
+		if err == nil && ok {
+			ok, err := regexp.MatchString(valRx, attr.Val)
+			if err == nil && ok {
+				return &attr
 			}
 		}
+	}
+	return nil
+}
+
+func findBeer(node *html.Node, beers *[]beerInfo) {
+	if findAttr(node, "^id$", "^beer-\\d+$") != nil {
+		brewery, brew := "", ""
+		findBrewery(node, &brewery)
+		findBrew(node, &brew)
+		*beers = append(*beers, beerInfo{brewery, brew})
+		return
 	}
 	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
 		findBeer(kid, beers)
@@ -58,33 +67,20 @@ func findBrewery(node *html.Node, brewery *string) bool {
 }
 
 func findBrew(node *html.Node, brew *string) bool {
-	for _, attr := range node.Attr {
-		if attr.Key == "class" && attr.Val == "beer-name" {
-			if content := node.FirstChild; content != nil {
-				*brew = content.Data
-				return true
-			}
+	if findAttr(node, "^class$", "^beer-name$") != nil {
+		if content := node.FirstChild; content != nil {
+			*brew = content.Data
+			return true
 		}
 	}
 	return recFind(node, brew, findBrew)
 }
 
 func findBarDesc(node *html.Node, desc *string) bool {
-	if node.DataAtom == atom.Meta {
-		isDesc := false
-		for _, attr := range node.Attr {
-			if attr.Key == "name" && attr.Val == "description" {
-				isDesc = true
-				break
-			}
-		}
-		if isDesc {
-			for _, attr := range node.Attr {
-				if attr.Key == "content" {
-					*desc = attr.Val
-					break
-				}
-			}
+	if findAttr(node, "^name$", "^description$") != nil {
+		if attr := findAttr(node, "^content$", ""); attr != nil {
+			*desc = attr.Val
+			return true
 		}
 	}
 	return recFind(node, desc, findBarDesc)
@@ -110,10 +106,15 @@ func readRc() {
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
+		if idx := strings.Index(line, "#"); idx >= 0 {
+			line = line[:idx]
+		}
 		idx := strings.IndexAny(line, " \t")
-		if idx < len(line)-1 {
+		if idx > 0 && idx < len(line)-1 {
 			id, name := line[:idx], strings.TrimSpace(line[idx:])
-			barMap[id] = name
+			if checkId(id) && name != "" {
+				barMap[id] = name
+			}
 		}
 	}
 }
@@ -151,13 +152,17 @@ func main() {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	doc, err := html.Parse(resp.Body)
+	if resp.StatusCode != 200 {
+		log.Fatalln("Sorry, couldn't find what's on tap at " + name)
+	}
+
+	page, err := html.Parse(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 	desc, beers := "", []beerInfo{}
-	findBarDesc(doc, &desc)
-	findBeer(doc, &beers)
+	findBarDesc(page, &desc)
+	findBeer(page, &beers)
 	if desc != "" {
 		fmt.Println(desc + "\n")
 	} else {
