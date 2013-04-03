@@ -21,6 +21,15 @@ type beerInfo struct {
 	brew    string
 }
 
+func recFind(node *html.Node, result *string, fn func(*html.Node, *string) bool) bool {
+	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
+		if fn(kid, result) {
+			return true
+		}
+	}
+	return false
+}
+
 func findBeer(node *html.Node, beers *[]beerInfo) {
 	if node.DataAtom == atom.Div {
 		for _, attr := range node.Attr {
@@ -29,6 +38,7 @@ func findBeer(node *html.Node, beers *[]beerInfo) {
 				findBrewery(node, &brewery)
 				findBrew(node, &brew)
 				*beers = append(*beers, beerInfo{brewery, brew})
+				return
 			}
 		}
 	}
@@ -44,12 +54,7 @@ func findBrewery(node *html.Node, brewery *string) bool {
 			return true
 		}
 	}
-	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
-		if findBrewery(kid, brewery) {
-			return true
-		}
-	}
-	return false
+	return recFind(node, brewery, findBrewery)
 }
 
 func findBrew(node *html.Node, brew *string) bool {
@@ -61,12 +66,7 @@ func findBrew(node *html.Node, brew *string) bool {
 			}
 		}
 	}
-	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
-		if findBrew(kid, brew) {
-			return true
-		}
-	}
-	return false
+	return recFind(node, brew, findBrew)
 }
 
 func findBarDesc(node *html.Node, desc *string) bool {
@@ -87,12 +87,7 @@ func findBarDesc(node *html.Node, desc *string) bool {
 			}
 		}
 	}
-	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
-		if findBarDesc(kid, desc) {
-			return true
-		}
-	}
-	return false
+	return recFind(node, desc, findBarDesc)
 }
 
 func checkId(id string) bool {
