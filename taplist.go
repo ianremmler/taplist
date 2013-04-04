@@ -46,9 +46,9 @@ func findAttr(node *html.Node, keyRx, valRx string) *html.Attribute {
 func findBeer(node *html.Node, beers *[]beerInfo) {
 	if findAttr(node, "^id$", "^beer-\\d+$") != nil {
 		brewery, brew := "", ""
-		findBrewery(node, &brewery)
-		findBrew(node, &brew)
-		*beers = append(*beers, beerInfo{brewery, brew})
+		if findBrewery(node, &brewery) && findBrew(node, &brew) {
+			*beers = append(*beers, beerInfo{brewery, brew})
+		}
 		return
 	}
 	for kid := node.FirstChild; kid != nil; kid = kid.NextSibling {
