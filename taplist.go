@@ -32,10 +32,8 @@ func recFind(node *html.Node, result *string, fn func(*html.Node, *string) bool)
 
 func findAttr(node *html.Node, keyRx, valRx string) *html.Attribute {
 	for _, attr := range node.Attr {
-		ok, err := regexp.MatchString(keyRx, attr.Key)
-		if err == nil && ok {
-			ok, err := regexp.MatchString(valRx, attr.Val)
-			if err == nil && ok {
+		if ok, err := regexp.MatchString(keyRx, attr.Key); err == nil && ok {
+			if ok, err := regexp.MatchString(valRx, attr.Val); err == nil && ok {
 				return &attr
 			}
 		}
@@ -57,21 +55,17 @@ func findBeer(node *html.Node, beers *[]beerInfo) {
 }
 
 func findBrewery(node *html.Node, brewery *string) bool {
-	if node.DataAtom == atom.H4 {
-		if content := node.FirstChild; content != nil {
-			*brewery = content.Data
-			return true
-		}
+	if node.DataAtom == atom.H4 && node.FirstChild != nil {
+		*brewery = node.FirstChild.Data
+		return true
 	}
 	return recFind(node, brewery, findBrewery)
 }
 
 func findBrew(node *html.Node, brew *string) bool {
-	if findAttr(node, "^class$", "^beer-name$") != nil {
-		if content := node.FirstChild; content != nil {
-			*brew = content.Data
-			return true
-		}
+	if findAttr(node, "^class$", "^beer-name$") != nil && node.FirstChild != nil {
+		*brew = node.FirstChild.Data
+		return true
 	}
 	return recFind(node, brew, findBrew)
 }
